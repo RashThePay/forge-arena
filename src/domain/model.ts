@@ -67,7 +67,7 @@ export type Build = {
   skillIds: readonly ProtocolId[];
   defaultActionId?: ProtocolId;
   tactics: readonly TacticRule[];
-  appearance: Readonly<Record<string, ProtocolId>>;
+  appearance: Readonly<Record<number, ProtocolId>>;
 };
 
 export type RulesContract = {

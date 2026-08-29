@@ -20,6 +20,9 @@ This document records the decisions the engine may rely on.
 - The rules layer compiles stat formulas into resolved health, accuracy, healing, and damage before the fighter enters the simulation.
 - Tactics are ordered references to a condition, a granted action, and a target rule. The first matching affordable rule wins; otherwise the fallback action is used.
 - Every tactic evaluation is emitted to the battle log, including whether its condition matched and whether its action was usable.
+- Build codes use the `FA1.` envelope: format/ruleset versions, UTF-8 name, canonical numeric selections, ordered tactics, CRC32, and unpadded Base64URL.
+- Numeric fields use unsigned varints. Stats, equipment, skills, and appearance are sorted before encoding; tactic order is preserved because it is mechanically meaningful.
+- Decoders reject corruption, truncation, unsupported formats, unsafe values, and trailing data before ruleset validation.
 
 ## Extensibility boundary
 
