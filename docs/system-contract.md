@@ -23,6 +23,8 @@ This document records the decisions the engine may rely on.
 - Build codes use the `FA1.` envelope: format/ruleset versions, UTF-8 name, canonical numeric selections, ordered tactics, CRC32, and unpadded Base64URL.
 - Numeric fields use unsigned varints. Stats, equipment, skills, and appearance are sorted before encoding; tactic order is preserved because it is mechanically meaningful.
 - Decoders reject corruption, truncation, unsupported formats, unsafe values, and trailing data before ruleset validation.
+- Appearance uses stable numeric slot and asset IDs, remains mechanically free, and round-trips through the build code.
+- The first character renderer uses a vendored, attributed subset of Universal LPC idle layers. Runtime rendering never depends on the external generator or an API.
 
 ## Extensibility boundary
 

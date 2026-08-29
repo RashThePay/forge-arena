@@ -1,5 +1,6 @@
 import type { Build, TacticRule } from "../domain/model";
 import { IDS } from "./starter-rules";
+import { DEFAULT_APPEARANCE } from "./appearance";
 
 export const STARTER_TACTICS: TacticRule[] = [
   { conditionId: IDS.conditions.selfLow, actionId: IDS.actions.recover, targetRuleId: IDS.targets.self },
@@ -27,5 +28,5 @@ export const STARTER_BUILD: Build = {
   skillIds: [IDS.skills.powerStrike, IDS.skills.recover, IDS.skills.quickCut],
   defaultActionId: IDS.actions.sword,
   tactics: STARTER_TACTICS,
-  appearance: {},
+  appearance: DEFAULT_APPEARANCE,
 };
