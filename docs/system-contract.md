@@ -12,6 +12,8 @@ This document records the decisions the engine may rely on.
 - A build may be edited and encoded while invalid, but only valid builds may enter battle.
 - Appearance is mechanically free and separate from combat validation.
 - Persisted content uses positive numeric protocol IDs. IDs are stable, never derived from array position, and never reused.
+- Phase-one actions expose resolved accuracy and damage values. The future stat formula belongs to the rules/content layer and must feed those values without introducing named-stat checks into the event loop.
+- Simultaneous timeline events resolve by stable insertion sequence. Fighter input order therefore acts as the explicit tie-breaker until a content-level initiative rule is introduced.
 
 ## Extensibility boundary
 
@@ -23,6 +25,6 @@ Stats and content definitions live in a rules catalog rather than engine conditi
 
 - Final stat names, ranges, and costs
 - Initial equipment and skill catalog
-- Action accuracy and damage formulas
+- The rules-layer formulas that derive an action's resolved accuracy and damage
 - Build-code byte layout and checksum
 - The first representative matchup set used for balance tests
