@@ -1,6 +1,6 @@
 import { useMemo, useState, type ComponentType, type CSSProperties } from "react";
 import {
-  GiBattleGear, GiBroadsword, GiBullseye, GiCrossedSwords, GiCrystalBall,
+  GiBattleGear, GiBroadsword, GiBullseye, GiCharacter, GiCrossedSwords, GiCrystalBall,
   GiHeartArmor, GiHeartBeats, GiMuscleUp, GiRoundShield, GiScrollUnfurled,
   GiSkills, GiThirdEye, GiUpgrade, GiWingfoot,
 } from "react-icons/gi";
@@ -13,11 +13,14 @@ import type { Build, CatalogOption } from "../domain/model";
 import { validateBuild } from "../domain/validation";
 import { STARTER_BUILD } from "../content/starter-build";
 import { IDS, STARTER_RULES } from "../content/starter-rules";
+import { APPEARANCE_OPTIONS, APPEARANCE_SLOTS, appearanceValue, type AppearanceOption } from "../content/appearance";
+import { LpcAvatar } from "./LpcAvatar";
 
-type Tab = "attributes" | "arsenal" | "skills" | "tactics";
+type Tab = "appearance" | "attributes" | "arsenal" | "skills" | "tactics";
 type GameIcon = ComponentType<{ className?: string }>;
 
 const TABS: { id: Tab; label: string; icon: GameIcon }[] = [
+  { id: "appearance", label: "Champion", icon: GiCharacter },
   { id: "attributes", label: "Attributes", icon: GiUpgrade },
   { id: "arsenal", label: "Arsenal", icon: GiBattleGear },
   { id: "skills", label: "Skills", icon: GiSkills },
@@ -81,6 +84,10 @@ export function App() {
     setBuild((value) => ({ ...value, tactics }));
   }
 
+  function chooseAppearance(slot: ProtocolId, option: AppearanceOption) {
+    setBuild((value) => ({ ...value, appearance: { ...value.appearance, [slot]: option.id } }));
+  }
+
   async function copyCode() {
     const code = encodeBuild(build);
     await navigator.clipboard?.writeText(code);
@@ -120,9 +127,9 @@ export function App() {
 
         <section className="champion-stage">
           <div className="stage-caption"><span>BUILD I</span><b>THE UNBROKEN</b></div>
-          <div className="summoning-seal" aria-hidden="true">
+          <div className="summoning-seal">
             <span className="seal-orbit orbit-a" /><span className="seal-orbit orbit-b" />
-            <GiCrossedSwords className="seal-mark" />
+            <LpcAvatar appearance={build.appearance} className="stage-avatar" />
           </div>
           <div className="champion-nameplate"><small>CHAMPION</small><strong>{build.name || "Unnamed Fighter"}</strong><span>Level-free competitive build</span></div>
           <div className="loadout-orbits">
@@ -133,15 +140,23 @@ export function App() {
               return <button key={slot.id} className={"orbit-slot slot-" + (index + 1)} onClick={() => setTab("arsenal")}><Icon /><span>{item?.label ?? "Empty"}</span></button>;
             })}
           </div>
-          <p className="visual-note">Avatar forge attunement pending</p>
+          <button className="visual-note" onClick={() => setTab("appearance")}>LPC APPEARANCE · EDIT</button>
         </section>
 
         <aside className="control-vault">
           <div className="vault-heading"><div><span>{TABS.find((item) => item.id === tab)?.label}</span>
-            <h2>{tab === "attributes" ? "Shape the fighter" : tab === "arsenal" ? "Choose the loadout" : tab === "skills" ? "Bind combat arts" : "Write battle instincts"}</h2>
+            <h2>{tab === "appearance" ? "Forge the champion" : tab === "attributes" ? "Shape the fighter" : tab === "arsenal" ? "Choose the loadout" : tab === "skills" ? "Bind combat arts" : "Write battle instincts"}</h2>
           </div><b>{tab === "skills" ? build.skillIds.length + "/" + STARTER_RULES.maxSkills : tab === "tactics" ? build.tactics.length + "/" + STARTER_RULES.maxTactics : "EDIT"}</b></div>
 
           <div className="vault-content">
+            {tab === "appearance" && <div className="appearance-forge">
+              <AppearanceGroup label="Body" slot={APPEARANCE_SLOTS.body} options={APPEARANCE_OPTIONS.body} appearance={build.appearance} choose={chooseAppearance} />
+              <AppearanceGroup label="Skin tone" slot={APPEARANCE_SLOTS.skin} options={APPEARANCE_OPTIONS.skin} appearance={build.appearance} choose={chooseAppearance} swatches />
+              <AppearanceGroup label="Hair" slot={APPEARANCE_SLOTS.hair} options={APPEARANCE_OPTIONS.hair} appearance={build.appearance} choose={chooseAppearance} />
+              <AppearanceGroup label="Hair tone" slot={APPEARANCE_SLOTS.hairColor} options={APPEARANCE_OPTIONS.hairColor} appearance={build.appearance} choose={chooseAppearance} swatches />
+              <AppearanceGroup label="Pose" slot={APPEARANCE_SLOTS.facing} options={APPEARANCE_OPTIONS.facing} appearance={build.appearance} choose={chooseAppearance} />
+              <p className="appearance-credit">Universal LPC · appearance is free and encoded with the build</p>
+            </div>}
             {tab === "attributes" && <div className="stat-list">{STARTER_RULES.stats.map((stat) => {
               const Icon = STAT_ICONS[stat.key]; const value = build.stats[stat.id];
               return <div className="stat-row" key={stat.id}><Icon /><div><strong>{stat.label}</strong><span>{["Raw", "Trained", "Capable", "Elite", "Mythic"][value - 1]}</span></div>
@@ -187,4 +202,24 @@ export function App() {
       </section>
     </main>
   );
+}
+
+type AppearanceGroupProps = {
+  label: string;
+  slot: ProtocolId;
+  options: readonly AppearanceOption[];
+  appearance: Build["appearance"];
+  choose: (slot: ProtocolId, option: AppearanceOption) => void;
+  swatches?: boolean;
+};
+
+function AppearanceGroup({ label, slot, options, appearance, choose, swatches }: AppearanceGroupProps) {
+  const selected = appearanceValue(appearance, slot);
+  return <fieldset className={`appearance-group ${swatches ? "swatches" : ""}`}>
+    <legend>{label}</legend>
+    <div>{options.map((option) => <button type="button" key={option.id} className={selected === option.id ? "selected" : ""} onClick={() => choose(slot, option)} aria-pressed={selected === option.id}>
+      {option.swatch && <i style={{ background: option.swatch }} />}
+      <span>{option.label}</span>
+    </button>)}</div>
+  </fieldset>;
 }

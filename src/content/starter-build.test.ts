@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateBuildCost } from "../domain/budget";
 import { compileBuild } from "../domain/build-compiler";
+import { decodeBuild, encodeBuild } from "../domain/build-code";
 import { simulateDuel } from "../domain/duel";
 import { protocolId } from "../domain/ids";
 import { validateBuild } from "../domain/validation";
@@ -18,5 +19,9 @@ describe("starter builder content", () => {
 
     expect(result.winnerId).toBeDefined();
     expect(result.events.at(-1)?.type).toBe("BATTLE_ENDED");
+  });
+
+  it("keeps LPC appearance choices in the compact build code", () => {
+    expect(decodeBuild(encodeBuild(STARTER_BUILD)).appearance).toEqual(STARTER_BUILD.appearance);
   });
 });
