@@ -16,6 +16,8 @@ This document records the decisions the engine may rely on.
 - Simultaneous timeline events resolve by stable insertion sequence. Fighter input order therefore acts as the explicit tie-breaker until a content-level initiative rule is introduced.
 - Actions are data: tags, timing, accuracy, costs, and ordered effects. The engine resolves generic effect primitives rather than checking named weapons, classes, or skills.
 - Phase-two generic effects are damage, healing, resource change, and status application. Statuses may react to generic trigger events.
+- Equipment occupies explicit slots, may gate on intrinsic stats, and grants actions/resources/statuses without adding intrinsic stat points.
+- The rules layer compiles stat formulas into resolved health, accuracy, healing, and damage before the fighter enters the simulation.
 
 ## Extensibility boundary
 

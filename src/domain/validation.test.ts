@@ -17,6 +17,7 @@ const rules: RulesContract = {
     },
   ],
   skills: [],
+  actions: [],
 };
 
 function build(overrides: Partial<Build> = {}): Build {
@@ -29,6 +30,7 @@ function build(overrides: Partial<Build> = {}): Build {
     skillIds: [],
     tactics: [],
     appearance: {},
+    defaultActionId: protocolId(11),
     ...overrides,
   };
 }
@@ -62,6 +64,13 @@ describe("build contract", () => {
       code: "TOO_MANY_TACTICS",
       actual: 3,
       maximum: 2,
+    });
+  });
+
+  it("requires every intrinsic stat to be explicit in the build", () => {
+    expect(validateBuild(build({ stats: {} }), rules)).toContainEqual({
+      code: "MISSING_STAT",
+      statId: 1,
     });
   });
 });

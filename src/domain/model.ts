@@ -1,4 +1,5 @@
 import type { ProtocolId } from "./ids";
+import type { ActionDefinition, EffectTarget, ResourceDefinition, StatusDefinition } from "./content";
 
 export type StatDefinition = {
   id: ProtocolId;
@@ -20,6 +21,34 @@ export type CatalogOption = {
   label: string;
   budgetCost: number;
   requirements?: readonly Requirement[];
+  slotId?: ProtocolId;
+  grantedActionIds?: readonly ProtocolId[];
+  grantedResources?: readonly ResourceDefinition[];
+  grantedStatuses?: readonly StatusDefinition[];
+};
+
+export type EquipmentSlotDefinition = {
+  id: ProtocolId;
+  key: string;
+  label: string;
+};
+
+export type StatFormula = {
+  base: number;
+  terms?: readonly { statId: ProtocolId; multiplier: number }[];
+  minimum?: number;
+  maximum?: number;
+};
+
+export type EffectBlueprint =
+  | { type: "damage"; target: EffectTarget; amount: StatFormula; tags?: readonly string[] }
+  | { type: "heal"; target: EffectTarget; amount: StatFormula }
+  | { type: "changeResource"; target: EffectTarget; resourceId: ProtocolId; amount: number }
+  | { type: "applyStatus"; target: EffectTarget; status: StatusDefinition; stacks?: number };
+
+export type ActionBlueprint = Omit<ActionDefinition, "accuracy" | "effects"> & {
+  accuracy: StatFormula;
+  effects: readonly EffectBlueprint[];
 };
 
 export type TacticRule = {
@@ -35,6 +64,7 @@ export type Build = {
   stats: Readonly<Record<number, number>>;
   equipmentIds: readonly ProtocolId[];
   skillIds: readonly ProtocolId[];
+  defaultActionId?: ProtocolId;
   tactics: readonly TacticRule[];
   appearance: Readonly<Record<string, ProtocolId>>;
 };
@@ -45,4 +75,8 @@ export type RulesContract = {
   stats: readonly StatDefinition[];
   equipment: readonly CatalogOption[];
   skills: readonly CatalogOption[];
+  equipmentSlots?: readonly EquipmentSlotDefinition[];
+  maxSkills?: number;
+  actions?: readonly ActionBlueprint[];
+  maxHealth?: StatFormula;
 };
