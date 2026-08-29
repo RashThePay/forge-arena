@@ -10,6 +10,8 @@ export const STARTER_RULES: RulesContract = {
   equipmentSlots: [],
   actions: [],
   maxHealth: { base: 20 },
+  tacticConditions: [],
+  targetRules: [],
   stats: [
     { id: protocolId(1), key: "power", label: "Power", min: 1, max: 5, costByValue: progressiveCosts },
     { id: protocolId(2), key: "precision", label: "Precision", min: 1, max: 5, costByValue: progressiveCosts },

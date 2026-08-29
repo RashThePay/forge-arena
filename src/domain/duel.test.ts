@@ -66,7 +66,7 @@ describe("duel engine", () => {
     const input = structuredClone(STARTER_DUEL);
     input.fighters[0].resources = [{ id: protocolId(50), key: "focus", maximum: 2, initial: 1 }];
     input.fighters[0].defaultAction.costs = [{ resourceId: protocolId(50), amount: 1 }];
-    expect(() => simulateDuel(input)).toThrow("cannot afford default action");
+    expect(() => simulateDuel(input)).toThrow("cannot afford its fallback action");
   });
 
   it("can resolve a victory caused by a data-defined reactive status", () => {
@@ -83,5 +83,26 @@ describe("duel engine", () => {
     }];
 
     expect(simulateDuel(input).winnerId).toBe(input.fighters[1].id);
+  });
+
+  it("records tactic evaluation and the rule that selected an action", () => {
+    const input = structuredClone(STARTER_DUEL);
+    const action = input.fighters[0].defaultAction;
+    input.fighters[0].tactics = [{
+      condition: { id: protocolId(70), key: "always", predicate: { type: "always" } },
+      action,
+      targetRule: { id: protocolId(71), key: "opponent", type: "opponent" },
+    }];
+    const result = simulateDuel(input);
+
+    expect(result.events).toContainEqual({
+      type: "TACTIC_EVALUATED", at: battleTime(0), actorId: input.fighters[0].id,
+      tacticIndex: 0, conditionId: protocolId(70), actionId: action.id,
+      matched: true, usable: true,
+    });
+    expect(result.events).toContainEqual({
+      type: "ACTION_SELECTED", at: battleTime(0), actorId: input.fighters[0].id,
+      actionId: action.id, tacticIndex: 0,
+    });
   });
 });
