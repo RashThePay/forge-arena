@@ -4,6 +4,7 @@ import { resolveFormula } from "./formulas";
 import type { ProtocolId } from "./ids";
 import type { ActionBlueprint, Build, CatalogOption, EffectBlueprint, RulesContract } from "./model";
 import { validateBuild } from "./validation";
+import type { CompiledTactic } from "./tactics";
 
 function uniqueById<T extends { id: ProtocolId }>(values: readonly T[]): T[] {
   return [...new Map(values.map((value) => [value.id, value])).values()];
@@ -48,12 +49,22 @@ export function compileBuild(
 
   const resources: ResourceDefinition[] = uniqueById(selected.flatMap((option) => option.grantedResources ?? []));
   const statuses: StatusDefinition[] = uniqueById(selected.flatMap((option) => option.grantedStatuses ?? []));
+  const conditions = new Map((rules.tacticConditions ?? []).map((condition) => [condition.id, condition]));
+  const targetRules = new Map((rules.targetRules ?? []).map((targetRule) => [targetRule.id, targetRule]));
+  const actionById = new Map(actions.map((action) => [action.id, action]));
+  const tactics: CompiledTactic[] = build.tactics.map((rule) => ({
+    condition: conditions.get(rule.conditionId)!,
+    action: actionById.get(rule.actionId)!,
+    targetRule: targetRules.get(rule.targetRuleId)!,
+  }));
 
   return {
     id: fighterId,
     name: build.name,
     maxHealth: resolveFormula(rules.maxHealth ?? { base: 1 }, build.stats),
     defaultAction,
+    actions,
+    tactics,
     resources,
     statuses,
   };

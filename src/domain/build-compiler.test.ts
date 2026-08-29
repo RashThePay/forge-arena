@@ -8,6 +8,8 @@ const ENDURANCE = protocolId(2);
 const MAIN_HAND = protocolId(10);
 const SWORD = protocolId(20);
 const STRIKE = protocolId(30);
+const ALWAYS = protocolId(40);
+const OPPONENT = protocolId(41);
 
 const rules: RulesContract = {
   buildBudget: 30,
@@ -31,6 +33,8 @@ const rules: RulesContract = {
       type: "damage", target: "target", amount: { base: 2, terms: [{ statId: POWER, multiplier: 2 }] },
     }],
   }],
+  tacticConditions: [{ id: ALWAYS, key: "always", predicate: { type: "always" } }],
+  targetRules: [{ id: OPPONENT, key: "opponent", type: "opponent" }],
 };
 
 const build: Build = {
@@ -65,5 +69,13 @@ describe("build compiler", () => {
   it("requires the fallback action to come from selected content", () => {
     expect(() => compileBuild({ ...build, defaultActionId: protocolId(999) }, rules, protocolId(100)))
       .toThrow("DEFAULT_ACTION_UNAVAILABLE");
+  });
+
+  it("compiles ordered tactic references into executable definitions", () => {
+    const tactical = { ...build, tactics: [{ conditionId: ALWAYS, actionId: STRIKE, targetRuleId: OPPONENT }] };
+    const fighter = compileBuild(tactical, rules, protocolId(100));
+    expect(fighter.tactics?.[0]).toMatchObject({
+      condition: { id: ALWAYS }, action: { id: STRIKE }, targetRule: { id: OPPONENT },
+    });
   });
 });

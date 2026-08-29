@@ -13,7 +13,10 @@ export type BuildProblem =
   | { code: "DUPLICATE_SELECTION"; optionId: number }
   | { code: "SLOT_CONFLICT"; slotId: number; optionIds: readonly number[] }
   | { code: "TOO_MANY_SKILLS"; actual: number; maximum: number }
-  | { code: "DEFAULT_ACTION_UNAVAILABLE"; actionId?: number };
+  | { code: "DEFAULT_ACTION_UNAVAILABLE"; actionId?: number }
+  | { code: "UNKNOWN_TACTIC_CONDITION"; tacticIndex: number; conditionId: number }
+  | { code: "UNKNOWN_TARGET_RULE"; tacticIndex: number; targetRuleId: number }
+  | { code: "TACTIC_ACTION_UNAVAILABLE"; tacticIndex: number; actionId: number };
 
 function validateOptions(
   build: Build,
@@ -78,6 +81,20 @@ export function validateBuild(build: Build, rules: RulesContract): BuildProblem[
   const grantedActions = new Set(selectedOptions.flatMap((option) => option.grantedActionIds ?? []));
   if (!build.defaultActionId || !grantedActions.has(build.defaultActionId)) {
     problems.push({ code: "DEFAULT_ACTION_UNAVAILABLE", actionId: build.defaultActionId });
+  }
+
+  const conditionIds = new Set((rules.tacticConditions ?? []).map((condition) => condition.id));
+  const targetRuleIds = new Set((rules.targetRules ?? []).map((targetRule) => targetRule.id));
+  for (const [tacticIndex, tactic] of build.tactics.entries()) {
+    if (!conditionIds.has(tactic.conditionId)) {
+      problems.push({ code: "UNKNOWN_TACTIC_CONDITION", tacticIndex, conditionId: tactic.conditionId });
+    }
+    if (!targetRuleIds.has(tactic.targetRuleId)) {
+      problems.push({ code: "UNKNOWN_TARGET_RULE", tacticIndex, targetRuleId: tactic.targetRuleId });
+    }
+    if (!grantedActions.has(tactic.actionId)) {
+      problems.push({ code: "TACTIC_ACTION_UNAVAILABLE", tacticIndex, actionId: tactic.actionId });
+    }
   }
 
   let cost: number | null = null;

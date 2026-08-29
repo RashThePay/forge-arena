@@ -5,6 +5,7 @@ export type BattleTime = number & { readonly __brand: "BattleTime" };
 export type BattleEvent =
   | { type: "BATTLE_STARTED"; at: BattleTime; seed: number }
   | { type: "ACTION_SELECTED"; at: BattleTime; actorId: ProtocolId; actionId: ProtocolId; tacticIndex: number | null }
+  | { type: "TACTIC_EVALUATED"; at: BattleTime; actorId: ProtocolId; tacticIndex: number; conditionId: ProtocolId; actionId: ProtocolId; matched: boolean; usable: boolean }
   | { type: "ACTION_STARTED"; at: BattleTime; actorId: ProtocolId; actionId: ProtocolId; resolvesAt: BattleTime }
   | { type: "ACTION_RESOLVED"; at: BattleTime; actorId: ProtocolId; actionId: ProtocolId; targetIds: readonly ProtocolId[]; hit: boolean }
   | { type: "DAMAGE_APPLIED"; at: BattleTime; sourceId: ProtocolId; targetId: ProtocolId; amount: number; tags: readonly string[] }

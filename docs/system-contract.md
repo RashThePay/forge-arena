@@ -18,6 +18,8 @@ This document records the decisions the engine may rely on.
 - Phase-two generic effects are damage, healing, resource change, and status application. Statuses may react to generic trigger events.
 - Equipment occupies explicit slots, may gate on intrinsic stats, and grants actions/resources/statuses without adding intrinsic stat points.
 - The rules layer compiles stat formulas into resolved health, accuracy, healing, and damage before the fighter enters the simulation.
+- Tactics are ordered references to a condition, a granted action, and a target rule. The first matching affordable rule wins; otherwise the fallback action is used.
+- Every tactic evaluation is emitted to the battle log, including whether its condition matched and whether its action was usable.
 
 ## Extensibility boundary
 

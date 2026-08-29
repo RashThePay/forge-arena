@@ -4,12 +4,15 @@ import type { ActionDefinition, ResourceDefinition, StatusDefinition } from "./c
 import { emitActionResolvedTriggers, resolveEffects } from "./effects";
 import type { ProtocolId } from "./ids";
 import { createSeededRandom, type RandomSource } from "./rng";
+import { selectTactic, type CompiledTactic } from "./tactics";
 
 export type DuelFighter = {
   id: ProtocolId;
   name: string;
   maxHealth: number;
   defaultAction: ActionDefinition;
+  actions?: readonly ActionDefinition[];
+  tactics?: readonly CompiledTactic[];
   resources?: readonly ResourceDefinition[];
   statuses?: readonly StatusDefinition[];
 };
@@ -27,7 +30,9 @@ export type DuelResult = {
   events: readonly BattleEvent[];
 };
 
-type FighterState = Omit<DuelFighter, "resources" | "statuses"> & CombatantState;
+type FighterState = Omit<DuelFighter, "resources" | "statuses"> & CombatantState & {
+  activeAction: ActionDefinition | null;
+};
 
 type InternalEvent =
   | { type: "CHOOSE_ACTION"; actorId: ProtocolId }
@@ -97,11 +102,12 @@ function payActionCosts(actor: FighterState, action: ActionDefinition, at: Battl
 export function simulateDuel(input: DuelInput, random: RandomSource = createSeededRandom(input.seed)): DuelResult {
   assertInput(input);
 
-  const fighters = new Map(input.fighters.map((fighter) => [fighter.id, {
+  const fighters = new Map<ProtocolId, FighterState>(input.fighters.map((fighter) => [fighter.id, {
     ...fighter,
     health: fighter.maxHealth,
     resources: createResourceState(fighter.resources),
     statuses: new Map((fighter.statuses ?? []).map((definition) => [definition.id, { definition, stacks: 1 }])),
+    activeAction: null as ActionDefinition | null,
   }]));
   const events: BattleEvent[] = [{ type: "BATTLE_STARTED", at: battleTime(0), seed: input.seed }];
   const queue: QueueEntry[] = [];
@@ -124,12 +130,29 @@ export function simulateDuel(input: DuelInput, random: RandomSource = createSeed
     if (!actor || actor.health <= 0) continue;
 
     if (scheduled.event.type === "CHOOSE_ACTION") {
-      const action = actor.defaultAction;
-      const target = opponentOf(fighters, actor.id);
+      const opponent = opponentOf(fighters, actor.id);
+      const selection = selectTactic(
+        actor, opponent, actor.defaultAction, actor.tactics ?? [], opponent.activeAction,
+      );
+      const { action, target } = selection;
       const resolvesAt = battleTime(now + action.windup);
 
       payActionCosts(actor, action, now, events);
-      events.push({ type: "ACTION_SELECTED", at: now, actorId: actor.id, actionId: action.id, tacticIndex: null });
+      for (const evaluation of selection.evaluations) {
+        events.push({
+          type: "TACTIC_EVALUATED", at: now, actorId: actor.id,
+          tacticIndex: evaluation.tacticIndex,
+          conditionId: evaluation.tactic.condition.id,
+          actionId: evaluation.tactic.action.id,
+          matched: evaluation.matched,
+          usable: evaluation.usable,
+        });
+      }
+      actor.activeAction = action;
+      events.push({
+        type: "ACTION_SELECTED", at: now, actorId: actor.id,
+        actionId: action.id, tacticIndex: selection.tacticIndex,
+      });
       events.push({ type: "ACTION_STARTED", at: now, actorId: actor.id, actionId: action.id, resolvesAt });
       enqueue(queue, {
         at: resolvesAt,
@@ -140,6 +163,7 @@ export function simulateDuel(input: DuelInput, random: RandomSource = createSeed
     }
 
     const { action, targetId } = scheduled.event;
+    actor.activeAction = null;
     const target = fighters.get(targetId);
     if (!target || target.health <= 0) continue;
 

@@ -1,5 +1,6 @@
 import type { ProtocolId } from "./ids";
 import type { ActionDefinition, EffectTarget, ResourceDefinition, StatusDefinition } from "./content";
+import type { ConditionDefinition, TargetRuleDefinition } from "./tactics";
 
 export type StatDefinition = {
   id: ProtocolId;
@@ -79,4 +80,6 @@ export type RulesContract = {
   maxSkills?: number;
   actions?: readonly ActionBlueprint[];
   maxHealth?: StatFormula;
+  tacticConditions?: readonly ConditionDefinition[];
+  targetRules?: readonly TargetRuleDefinition[];
 };
