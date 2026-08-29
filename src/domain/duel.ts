@@ -1,20 +1,17 @@
 import { battleTime, type BattleEvent, type BattleTime } from "./battle";
+import { createResourceState, type CombatantState } from "./combat-state";
+import type { ActionDefinition, ResourceDefinition, StatusDefinition } from "./content";
+import { emitActionResolvedTriggers, resolveEffects } from "./effects";
 import type { ProtocolId } from "./ids";
 import { createSeededRandom, type RandomSource } from "./rng";
-
-export type DuelAction = {
-  id: ProtocolId;
-  windup: number;
-  recovery: number;
-  accuracy: number;
-  damage: number;
-};
 
 export type DuelFighter = {
   id: ProtocolId;
   name: string;
   maxHealth: number;
-  defaultAction: DuelAction;
+  defaultAction: ActionDefinition;
+  resources?: readonly ResourceDefinition[];
+  statuses?: readonly StatusDefinition[];
 };
 
 export type DuelInput = {
@@ -25,16 +22,16 @@ export type DuelInput = {
 
 export type DuelResult = {
   seed: number;
-  winnerId: ProtocolId;
+  winnerId: ProtocolId | null;
   elapsed: BattleTime;
   events: readonly BattleEvent[];
 };
 
-type FighterState = DuelFighter & { health: number };
+type FighterState = Omit<DuelFighter, "resources" | "statuses"> & CombatantState;
 
 type InternalEvent =
   | { type: "CHOOSE_ACTION"; actorId: ProtocolId }
-  | { type: "RESOLVE_ACTION"; actorId: ProtocolId; targetId: ProtocolId; action: DuelAction };
+  | { type: "RESOLVE_ACTION"; actorId: ProtocolId; targetId: ProtocolId; action: ActionDefinition };
 
 type QueueEntry = {
   at: BattleTime;
@@ -44,12 +41,15 @@ type QueueEntry = {
 
 const DEFAULT_EVENT_LIMIT = 10_000;
 
-function assertAction(action: DuelAction): void {
+function assertAction(action: ActionDefinition): void {
   if (!Number.isInteger(action.windup) || action.windup < 0) throw new Error("Action windup must be a non-negative integer");
   if (!Number.isInteger(action.recovery) || action.recovery < 0) throw new Error("Action recovery must be a non-negative integer");
   if (action.windup + action.recovery === 0) throw new Error("An action must consume timeline time");
   if (action.accuracy < 0 || action.accuracy > 1) throw new Error("Action accuracy must be between 0 and 1");
-  if (!Number.isFinite(action.damage) || action.damage <= 0) throw new Error("Action damage must be positive");
+  if (action.effects.length === 0) throw new Error("An action must define at least one effect");
+  for (const cost of action.costs ?? []) {
+    if (!Number.isFinite(cost.amount) || cost.amount <= 0) throw new Error("Resource costs must be positive");
+  }
 }
 
 function assertInput(input: DuelInput): void {
@@ -75,12 +75,34 @@ function opponentOf(fighters: Map<ProtocolId, FighterState>, actorId: ProtocolId
   return target;
 }
 
+function payActionCosts(actor: FighterState, action: ActionDefinition, at: BattleTime, events: BattleEvent[]): void {
+  for (const cost of action.costs ?? []) {
+    const resource = actor.resources.get(cost.resourceId);
+    if (!resource || resource.current < cost.amount) {
+      throw new Error(`${actor.name} cannot afford default action ${action.id}`);
+    }
+  }
+
+  for (const cost of action.costs ?? []) {
+    const resource = actor.resources.get(cost.resourceId)!;
+    const previous = resource.current;
+    resource.current -= cost.amount;
+    events.push({
+      type: "RESOURCE_CHANGED", at, characterId: actor.id, resourceId: cost.resourceId,
+      previous, current: resource.current,
+    });
+  }
+}
+
 export function simulateDuel(input: DuelInput, random: RandomSource = createSeededRandom(input.seed)): DuelResult {
   assertInput(input);
 
-  const fighters = new Map(
-    input.fighters.map((fighter) => [fighter.id, { ...fighter, health: fighter.maxHealth }]),
-  );
+  const fighters = new Map(input.fighters.map((fighter) => [fighter.id, {
+    ...fighter,
+    health: fighter.maxHealth,
+    resources: createResourceState(fighter.resources),
+    statuses: new Map((fighter.statuses ?? []).map((definition) => [definition.id, { definition, stacks: 1 }])),
+  }]));
   const events: BattleEvent[] = [{ type: "BATTLE_STARTED", at: battleTime(0), seed: input.seed }];
   const queue: QueueEntry[] = [];
   let sequence = 0;
@@ -106,6 +128,7 @@ export function simulateDuel(input: DuelInput, random: RandomSource = createSeed
       const target = opponentOf(fighters, actor.id);
       const resolvesAt = battleTime(now + action.windup);
 
+      payActionCosts(actor, action, now, events);
       events.push({ type: "ACTION_SELECTED", at: now, actorId: actor.id, actionId: action.id, tacticIndex: null });
       events.push({ type: "ACTION_STARTED", at: now, actorId: actor.id, actionId: action.id, resolvesAt });
       enqueue(queue, {
@@ -124,14 +147,17 @@ export function simulateDuel(input: DuelInput, random: RandomSource = createSeed
     events.push({ type: "ACTION_RESOLVED", at: now, actorId: actor.id, actionId: action.id, targetIds: [target.id], hit });
 
     if (hit) {
-      const amount = Math.min(action.damage, target.health);
-      target.health -= amount;
-      events.push({ type: "DAMAGE_APPLIED", at: now, sourceId: actor.id, targetId: target.id, amount });
+      resolveEffects(action.effects, { at: now, actor, target, events });
+      emitActionResolvedTriggers({ at: now, actor, target, events });
 
-      if (target.health <= 0) {
-        events.push({ type: "CHARACTER_DEFEATED", at: now, characterId: target.id });
-        events.push({ type: "BATTLE_ENDED", at: now, winnerIds: [actor.id] });
-        return { seed: input.seed, winnerId: actor.id, elapsed: now, events };
+      const defeated = [actor, target].filter((fighter) => fighter.health <= 0);
+      if (defeated.length > 0) {
+        for (const fighter of defeated) {
+          events.push({ type: "CHARACTER_DEFEATED", at: now, characterId: fighter.id });
+        }
+        const winnerIds = [actor, target].filter((fighter) => fighter.health > 0).map((fighter) => fighter.id);
+        events.push({ type: "BATTLE_ENDED", at: now, winnerIds });
+        return { seed: input.seed, winnerId: winnerIds[0] ?? null, elapsed: now, events };
       }
     }
 

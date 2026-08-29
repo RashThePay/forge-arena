@@ -15,11 +15,11 @@ describe("duel engine", () => {
       fighters: [
         {
           id: protocolId(1), name: "Quick", maxHealth: 20,
-          defaultAction: { id: protocolId(11), windup: 5, recovery: 5, accuracy: 1, damage: 2 },
+          defaultAction: { id: protocolId(11), tags: ["quick"], windup: 5, recovery: 5, accuracy: 1, effects: [{ type: "damage", target: "target", amount: 2 }] },
         },
         {
           id: protocolId(2), name: "Slow", maxHealth: 20,
-          defaultAction: { id: protocolId(12), windup: 15, recovery: 10, accuracy: 1, damage: 5 },
+          defaultAction: { id: protocolId(12), tags: ["heavy"], windup: 15, recovery: 10, accuracy: 1, effects: [{ type: "damage", target: "target", amount: 5 }] },
         },
       ],
     });
@@ -38,11 +38,11 @@ describe("duel engine", () => {
       fighters: [
         {
           id: protocolId(1), name: "Never Hits", maxHealth: 5,
-          defaultAction: { id: protocolId(11), windup: 1, recovery: 1, accuracy: 0, damage: 100 },
+          defaultAction: { id: protocolId(11), tags: [], windup: 1, recovery: 1, accuracy: 0, effects: [{ type: "damage", target: "target", amount: 100 }] },
         },
         {
           id: protocolId(2), name: "Always Hits", maxHealth: 5,
-          defaultAction: { id: protocolId(12), windup: 2, recovery: 1, accuracy: 1, damage: 5 },
+          defaultAction: { id: protocolId(12), tags: [], windup: 2, recovery: 1, accuracy: 1, effects: [{ type: "damage", target: "target", amount: 5 }] },
         },
       ],
     });
@@ -60,5 +60,28 @@ describe("duel engine", () => {
     invalid.fighters[0].defaultAction.windup = 0;
     invalid.fighters[0].defaultAction.recovery = 0;
     expect(() => simulateDuel(invalid)).toThrow("consume timeline time");
+  });
+
+  it("pays declared action resource costs and refuses unaffordable defaults", () => {
+    const input = structuredClone(STARTER_DUEL);
+    input.fighters[0].resources = [{ id: protocolId(50), key: "focus", maximum: 2, initial: 1 }];
+    input.fighters[0].defaultAction.costs = [{ resourceId: protocolId(50), amount: 1 }];
+    expect(() => simulateDuel(input)).toThrow("cannot afford default action");
+  });
+
+  it("can resolve a victory caused by a data-defined reactive status", () => {
+    const input = structuredClone(STARTER_DUEL);
+    input.fighters[0].maxHealth = 5;
+    input.fighters[0].defaultAction.accuracy = 1;
+    input.fighters[0].defaultAction.windup = 1;
+    input.fighters[1].statuses = [{
+      id: protocolId(60), key: "fatal-thorns", tags: ["retaliation"], maxStacks: 1,
+      triggers: [{
+        on: "damageReceived",
+        effects: [{ type: "damage", target: "target", amount: 5 }],
+      }],
+    }];
+
+    expect(simulateDuel(input).winnerId).toBe(input.fighters[1].id);
   });
 });

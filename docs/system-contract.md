@@ -14,6 +14,8 @@ This document records the decisions the engine may rely on.
 - Persisted content uses positive numeric protocol IDs. IDs are stable, never derived from array position, and never reused.
 - Phase-one actions expose resolved accuracy and damage values. The future stat formula belongs to the rules/content layer and must feed those values without introducing named-stat checks into the event loop.
 - Simultaneous timeline events resolve by stable insertion sequence. Fighter input order therefore acts as the explicit tie-breaker until a content-level initiative rule is introduced.
+- Actions are data: tags, timing, accuracy, costs, and ordered effects. The engine resolves generic effect primitives rather than checking named weapons, classes, or skills.
+- Phase-two generic effects are damage, healing, resource change, and status application. Statuses may react to generic trigger events.
 
 ## Extensibility boundary
 

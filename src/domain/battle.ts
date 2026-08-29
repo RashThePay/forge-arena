@@ -7,7 +7,10 @@ export type BattleEvent =
   | { type: "ACTION_SELECTED"; at: BattleTime; actorId: ProtocolId; actionId: ProtocolId; tacticIndex: number | null }
   | { type: "ACTION_STARTED"; at: BattleTime; actorId: ProtocolId; actionId: ProtocolId; resolvesAt: BattleTime }
   | { type: "ACTION_RESOLVED"; at: BattleTime; actorId: ProtocolId; actionId: ProtocolId; targetIds: readonly ProtocolId[]; hit: boolean }
-  | { type: "DAMAGE_APPLIED"; at: BattleTime; sourceId: ProtocolId; targetId: ProtocolId; amount: number }
+  | { type: "DAMAGE_APPLIED"; at: BattleTime; sourceId: ProtocolId; targetId: ProtocolId; amount: number; tags: readonly string[] }
+  | { type: "HEAL_APPLIED"; at: BattleTime; sourceId: ProtocolId; targetId: ProtocolId; amount: number }
+  | { type: "RESOURCE_CHANGED"; at: BattleTime; characterId: ProtocolId; resourceId: ProtocolId; previous: number; current: number }
+  | { type: "STATUS_APPLIED"; at: BattleTime; sourceId: ProtocolId; targetId: ProtocolId; statusId: ProtocolId; stacks: number }
   | { type: "CHARACTER_DEFEATED"; at: BattleTime; characterId: ProtocolId }
   | { type: "BATTLE_ENDED"; at: BattleTime; winnerIds: readonly ProtocolId[] };
 
