@@ -25,6 +25,8 @@ This document records the decisions the engine may rely on.
 - Decoders reject corruption, truncation, unsupported formats, unsafe values, and trailing data before ruleset validation.
 - Appearance uses stable numeric slot and asset IDs, remains mechanically free, and round-trips through the build code.
 - The first character renderer uses a vendored, attributed subset of Universal LPC idle layers. Runtime rendering never depends on the external generator or an API.
+- A duel room accepts exactly two `FA1` build codes, decodes and validates both against the active ruleset, and only then compiles them into engine fighters.
+- Re-running the same two builds with the same explicit seed must produce the same winner, elapsed time, final health, and event chronicle.
 
 ## Extensibility boundary
 
