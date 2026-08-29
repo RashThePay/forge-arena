@@ -15,8 +15,10 @@ import { STARTER_BUILD } from "../content/starter-build";
 import { IDS, STARTER_RULES } from "../content/starter-rules";
 import { APPEARANCE_OPTIONS, APPEARANCE_SLOTS, appearanceValue, type AppearanceOption } from "../content/appearance";
 import { LpcAvatar } from "./LpcAvatar";
+import { BattleRoom } from "./BattleRoom";
 
 type Tab = "appearance" | "attributes" | "arsenal" | "skills" | "tactics";
+type Screen = "forge" | "battle";
 type GameIcon = ComponentType<{ className?: string }>;
 
 const TABS: { id: Tab; label: string; icon: GameIcon }[] = [
@@ -41,6 +43,7 @@ const ACTION_LABELS = new Map<number, string>([
 ]);
 
 export function App() {
+  const [screen, setScreen] = useState<Screen>("forge");
   const [tab, setTab] = useState<Tab>("attributes");
   const [build, setBuild] = useState<Build>(STARTER_BUILD);
   const [notice, setNotice] = useState("Ready for the arena");
@@ -111,14 +114,16 @@ export function App() {
     <main className="forge-shell">
       <div className="ambient ambient-one" /><div className="ambient ambient-two" />
       <header className="game-bar">
-        <div className="brand-lockup"><GiCrossedSwords /><div><span>FORGE</span><strong>ARENA</strong></div></div>
-        <label className="build-title"><span>Current champion</span>
+        <div className="bar-left"><div className="brand-lockup"><GiCrossedSwords /><div><span>FORGE</span><strong>ARENA</strong></div></div>
+          <nav className="screen-switch" aria-label="Game screens"><button className={screen === "forge" ? "active" : ""} onClick={() => setScreen("forge")}>Forge</button><button className={screen === "battle" ? "active" : ""} onClick={() => setScreen("battle")}>Battle</button></nav>
+        </div>
+        {screen === "forge" ? <label className="build-title"><span>Current champion</span>
           <input value={build.name} maxLength={32} onChange={(event) => setBuild((value) => ({ ...value, name: event.target.value }))} />
-        </label>
-        <button className="code-action" onClick={copyCode}><GiCrystalBall /><span>Copy build code</span></button>
+        </label> : <div className="battle-bar-title"><span>ACTIVE MODE</span><strong>DUEL CHAMBER</strong></div>}
+        {screen === "forge" ? <button className="code-action" onClick={copyCode}><GiCrystalBall /><span>Copy build code</span></button> : <button className="code-action" onClick={() => setScreen("forge")}><GiBattleGear /><span>Return to forge</span></button>}
       </header>
 
-      <section className="builder-frame">
+      {screen === "battle" ? <BattleRoom currentBuild={build} /> : <section className="builder-frame">
         <nav className="chapter-rail" aria-label="Build sections">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}><Icon /><span>{label}</span></button>
@@ -199,7 +204,7 @@ export function App() {
             <p>{notice}</p>{trial && <b>{trial.won ? "VICTORY" : "DEFEAT"} · {trial.elapsed} ticks</b>}</div>
           <button className="arena-action" onClick={runTrial}><GiCrossedSwords /><span>Trial Duel</span><small>TEST THIS BUILD</small></button>
         </footer>
-      </section>
+      </section>}
     </main>
   );
 }
